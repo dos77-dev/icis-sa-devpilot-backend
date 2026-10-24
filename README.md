@@ -1,2 +1,5 @@
-# icis-sa-devpilot-backend
-Application source code for icis.sa.devpilot-backend
+# icis.sa.devpilot-backend
+
+Application Service
+
+Managed by DevPilot-Lite (SCM: GITHUB, CI: GITHUB_ACTIONS, CD: ARGOCD).
