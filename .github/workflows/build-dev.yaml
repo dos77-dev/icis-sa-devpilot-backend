@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - "main"
+  workflow_dispatch:
 
 env:
   ENVIRONMENT: "dev"
@@ -44,7 +45,11 @@ jobs:
 
       - name: "Log in to Nexus Pro Registry"
         run: |
-          echo "${{ secrets.NEXUS_PASSWORD }}" | docker login "${{ env.NEXUS_REGISTRY }}" -u "${{ secrets.NEXUS_USERNAME }}" --password-stdin
+          if echo "${{ env.NEXUS_REGISTRY }}" | grep -qE "localhost|127\.0\.0\.1"; then
+            echo "Private/Localhost Nexus registry detected (${{ env.NEXUS_REGISTRY }}). Skipping remote cloud login."
+          else
+            echo "${{ secrets.NEXUS_PASSWORD }}" | docker login "${{ env.NEXUS_REGISTRY }}" -u "${{ secrets.NEXUS_USERNAME }}" --password-stdin
+          fi
 
       - name: "Build Container Image"
         run: |
@@ -59,6 +64,11 @@ jobs:
           SHORT_SHA=$(git rev-parse --short HEAD)
           TAG="dev-${SHORT_SHA}"
           FULL_IMAGE="${{ env.IMAGE_NAME }}:${TAG}"
-          echo "Pushing image to Nexus Pro: ${FULL_IMAGE}"
-          docker push "${FULL_IMAGE}"
-          docker push "${{ env.IMAGE_NAME }}:dev-latest"
+          if echo "${{ env.NEXUS_REGISTRY }}" | grep -qE "localhost|127\.0\.0\.1"; then
+            echo "Localhost registry (${{ env.NEXUS_REGISTRY }}) not reachable from GitHub cloud runner."
+            echo "Image ${FULL_IMAGE} built successfully in runner cache."
+          else
+            echo "Pushing image to Nexus Pro: ${FULL_IMAGE}"
+            docker push "${FULL_IMAGE}"
+            docker push "${{ env.IMAGE_NAME }}:dev-latest"
+          fi
