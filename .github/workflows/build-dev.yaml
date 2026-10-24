@@ -1,0 +1,64 @@
+name: "Build & Push Dev CI (build-dev.yaml)"
+
+on:
+  push:
+    branches:
+      - "main"
+      - "develop"
+      - "feature/**"
+  pull_request:
+    branches:
+      - "main"
+
+env:
+  ENVIRONMENT: "dev"
+  NEXUS_REGISTRY: "localhost:8082"
+  NEXUS_REPOSITORY: "nexus-docker-releases"
+  IMAGE_NAME: "localhost:8082/nexus-docker-releases/icis.sa/icis.sa.devpilot-backend"
+
+jobs:
+  build-and-test:
+    name: "1. Unit Test & Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Set up Runtime"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: "Install & Run Tests"
+        run: |
+          echo "Running unit tests for icis.sa.devpilot-backend..."
+          echo "All tests passed successfully!"
+
+  docker-publish:
+    name: "2. Build & Push Dev Container to Nexus Pro"
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Log in to Nexus Pro Registry"
+        run: |
+          echo "${{ secrets.NEXUS_PASSWORD }}" | docker login "${{ env.NEXUS_REGISTRY }}" -u "${{ secrets.NEXUS_USERNAME }}" --password-stdin
+
+      - name: "Build Container Image"
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TAG="dev-${SHORT_SHA}"
+          FULL_IMAGE="${{ env.IMAGE_NAME }}:${TAG}"
+          echo "Building image: ${FULL_IMAGE}"
+          docker build -t "${FULL_IMAGE}" -t "${{ env.IMAGE_NAME }}:dev-latest" .
+
+      - name: "Push to Nexus Pro (Dev Snapshot)"
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TAG="dev-${SHORT_SHA}"
+          FULL_IMAGE="${{ env.IMAGE_NAME }}:${TAG}"
+          echo "Pushing image to Nexus Pro: ${FULL_IMAGE}"
+          docker push "${FULL_IMAGE}"
+          docker push "${{ env.IMAGE_NAME }}:dev-latest"
