@@ -15,7 +15,7 @@ env:
   ENVIRONMENT: "dev"
   NEXUS_REGISTRY: "localhost:8082"
   NEXUS_REPOSITORY: "nexus-docker-releases"
-  IMAGE_NAME: "localhost:8082/icis-sa-devpilot-backend"
+  IMAGE_NAME: "localhost:8082/icis/sa/icis-sa-devpilot-backend"
 
 jobs:
   build-and-test:
@@ -54,16 +54,14 @@ jobs:
       - name: "Build Container Image"
         run: |
           BUILD_TAG=$(date +'%Y%m%d%H%M%S')$(date +'%3N' | cut -c1)
-          TAG="${BUILD_TAG}"
-          FULL_IMAGE="${{ env.IMAGE_NAME }}:${TAG}"
+          FULL_IMAGE="${{ env.IMAGE_NAME }}:${BUILD_TAG}"
           echo "Building image: ${FULL_IMAGE}"
           docker build -t "${FULL_IMAGE}" -t "${{ env.IMAGE_NAME }}:latest" .
 
       - name: "Push to Nexus Pro (Dev Snapshot)"
         run: |
           BUILD_TAG=$(date +'%Y%m%d%H%M%S')$(date +'%3N' | cut -c1)
-          TAG="${BUILD_TAG}"
-          FULL_IMAGE="${{ env.IMAGE_NAME }}:${TAG}"
+          FULL_IMAGE="${{ env.IMAGE_NAME }}:${BUILD_TAG}"
           if echo "${{ env.NEXUS_REGISTRY }}" | grep -qE "localhost|127\.0\.0\.1"; then
             echo "Localhost registry (${{ env.NEXUS_REGISTRY }}) not reachable from GitHub cloud runner."
             echo "Image ${FULL_IMAGE} built successfully in runner cache."
